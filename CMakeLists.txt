@@ -56,8 +56,6 @@ set(JEEFCRAFT_SRC
 
 	src/game/camera.c
 	src/game/camera.h
-	src/game/world.c
-	src/game/world.h
 
 	src/graphics/shader.c
 	src/graphics/shader.h
@@ -71,6 +69,8 @@ set(JEEFCRAFT_SRC
 	src/math/frustum.c
 	src/math/frustum.h
 	src/math/math.h
+	src/math/ray.c
+	src/math/ray.h
 	src/math/screenWorld.c
 	src/math/screenWorld.h
 
@@ -81,6 +81,22 @@ set(JEEFCRAFT_SRC
 	src/platform/glfw3/glfw3Input.c
 	src/platform/glfw3/glfw3Platform.c
 	src/platform/glfw3/glfw3Window.c
+
+	src/render/renderer.c
+	src/render/renderer.h
+	src/render/renderTypes.h
+	src/render/worldRenderer.c
+	src/render/worldRenderer.h
+
+	src/world/cube.h
+	src/world/materials.h
+	src/world/terrainGenerator.c
+	src/world/terrainGenerator.h
+	src/world/util.c
+	src/world/util.h
+	src/world/world.c
+	src/world/world.h
+	src/world/worldTypes.h
 )
 add_executable(${EXECUTABLE_NAME} ${JEEFCRAFT_SRC})
 target_link_libraries(${EXECUTABLE_NAME}
@@ -123,3 +139,5 @@ source_group("main" REGULAR_EXPRESSION src/main/*)
 source_group("math" REGULAR_EXPRESSION src/math/*)
 source_group("platform" REGULAR_EXPRESSION src/platform/*)
 source_group("platform\\glfw3" REGULAR_EXPRESSION src/platform/glfw3/*)
+source_group("render" REGULAR_EXPRESSION src/render/*)
+source_group("world" REGULAR_EXPRESSION src/world/*)

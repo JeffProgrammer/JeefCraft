@@ -14,55 +14,27 @@
 // limitations under the License.
 //----------------------------------------------------------------------------
 
-#ifndef _MATH_MATH_H_
-#define _MATH_MATH_H_
+#ifndef _WORLD_WORLDTYPES_H_
+#define _WORLD_WORLDTYPES_H_
 
-#include <cglm/cglm.h>
 #include "base/types.h"
+#include "render/renderTypes.h"
+#include "world/world.h"
 
-typedef union {
-   vec3 vec;
+typedef struct Cube {
+   U16 material : 10; // 1024 material types
+   U16 light : 4;     // 0-15 light level
+   U16 flag1 : 1;     // 1-bit extra flag
+   U16 flag2 : 1;     // 1-bit extra flag
+} Cube;
 
-   struct {
-      F32 x;
-      F32 y;
-      F32 z;
-   };
-} Vec3;
+typedef struct Chunk {
+   S32 startX;
+   S32 startZ;
+   Cube *cubeData;                         // Cube data for full chunk
+   RenderChunk renderChunks[CHUNK_SPLITS]; // Per-render chunk data.
+   void *graphicsData; // Per Graphics API user data.
+} Chunk;
 
-typedef union {
-   vec4 vec;
-
-   struct {
-      F32 x;
-      F32 y;
-      F32 z;
-      F32 w;
-   };
-} Vec4;
-
-static inline Vec3 create_vec3(F32 x, F32 y, F32 z) {
-   Vec3 v;
-   v.x = x;
-   v.y = y;
-   v.z = z;
-   return v;
-}
-
-static inline Vec4 create_vec4(F32 x, F32 y, F32 z, F32 w) {
-   Vec4 v;
-   v.x = x;
-   v.y = y;
-   v.z = z;
-   v.w = w;
-   return v;
-}
-
-static inline bool isFloatZero(F32 flt) {
-   return flt > -0.0001f && flt < 0.0001f;
-}
-
-// Pls.
-#define glm_vec_len glm_vec_norm
 
 #endif

@@ -24,8 +24,9 @@
 #include "platform/input.h"
 #include "graphics/shader.h"
 #include "game/camera.h"
-#include "game/world.h"
+#include "world/world.h"
 #include "math/math.h"
+#include "render/renderer.h"
 
 extern S32 gVisibleChunks;
 extern S32 gTotalChunks;
@@ -58,6 +59,10 @@ int main(int argc, char **argv) {
    F64 secondTime = lastTime;
 
    initWorld();
+
+   // You must init renderer after world becuase of GL.
+   // ..I think.
+   initMainRenderer();
 
    S32 fpsCounter = 0;
 #define FPS_BUFFER_SIZE 256
@@ -102,7 +107,7 @@ int main(int argc, char **argv) {
 
       // Perform rendering.
       glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-      renderWorld(delta);
+      render(delta);
 
       swapBuffers(&window);
       pollEvents(&window);
@@ -111,6 +116,8 @@ int main(int argc, char **argv) {
       fpsCounter++;
    }
    
+   // Must free renderer before world.
+   freeMainRenderer();
    freeWorld();
    freeWindow(&window);
    shutdownPlatform();

@@ -14,55 +14,17 @@
 // limitations under the License.
 //----------------------------------------------------------------------------
 
-#ifndef _MATH_MATH_H_
-#define _MATH_MATH_H_
+#include "render/renderer.h"
+#include "render/worldRenderer.h"
 
-#include <cglm/cglm.h>
-#include "base/types.h"
-
-typedef union {
-   vec3 vec;
-
-   struct {
-      F32 x;
-      F32 y;
-      F32 z;
-   };
-} Vec3;
-
-typedef union {
-   vec4 vec;
-
-   struct {
-      F32 x;
-      F32 y;
-      F32 z;
-      F32 w;
-   };
-} Vec4;
-
-static inline Vec3 create_vec3(F32 x, F32 y, F32 z) {
-   Vec3 v;
-   v.x = x;
-   v.y = y;
-   v.z = z;
-   return v;
+void initMainRenderer() {
+   initWorldRenderer();
 }
 
-static inline Vec4 create_vec4(F32 x, F32 y, F32 z, F32 w) {
-   Vec4 v;
-   v.x = x;
-   v.y = y;
-   v.z = z;
-   v.w = w;
-   return v;
+void freeMainRenderer() {
+   freeWorldRenderer();
 }
 
-static inline bool isFloatZero(F32 flt) {
-   return flt > -0.0001f && flt < 0.0001f;
+void render(F32 dt) {
+   renderWorld(dt);
 }
-
-// Pls.
-#define glm_vec_len glm_vec_norm
-
-#endif

@@ -14,55 +14,27 @@
 // limitations under the License.
 //----------------------------------------------------------------------------
 
-#ifndef _MATH_MATH_H_
-#define _MATH_MATH_H_
+#ifndef _RENDER_WORLDRENDERER_H_
+#define _RENDER_WORLDRENDERER_H_
 
-#include <cglm/cglm.h>
 #include "base/types.h"
 
-typedef union {
-   vec3 vec;
+struct Chunk;
 
-   struct {
-      F32 x;
-      F32 y;
-      F32 z;
-   };
-} Vec3;
+void initWorldRenderer();
 
-typedef union {
-   vec4 vec;
+void freeWorldRenderer();
 
-   struct {
-      F32 x;
-      F32 y;
-      F32 z;
-      F32 w;
-   };
-} Vec4;
+void renderWorld(F32 dt);
 
-static inline Vec3 create_vec3(F32 x, F32 y, F32 z) {
-   Vec3 v;
-   v.x = x;
-   v.y = y;
-   v.z = z;
-   return v;
-}
+void uploadChunkToGL(Chunk *chunk);
 
-static inline Vec4 create_vec4(F32 x, F32 y, F32 z, F32 w) {
-   Vec4 v;
-   v.x = x;
-   v.y = y;
-   v.z = z;
-   v.w = w;
-   return v;
-}
+void uploadGeometryToGL();
 
-static inline bool isFloatZero(F32 flt) {
-   return flt > -0.0001f && flt < 0.0001f;
-}
+void uploadRenderChunkToGL(Chunk *chunk, S32 renderChunkIndex);
 
-// Pls.
-#define glm_vec_len glm_vec_norm
+void freeChunkGL(Chunk *chunk);
+
+void freeRenderChunkGL(Chunk *chunk, S32 renderChunkIndex);
 
 #endif

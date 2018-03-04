@@ -14,14 +14,29 @@
 // limitations under the License.
 //----------------------------------------------------------------------------
 
-#ifndef _GAME_WORLD_H_
-#define _GAME_WORLD_H_
+#ifndef _RENDER_RENDERTYPES_H_
+#define _RENDER_RENDERTYPES_H_
 
 #include "base/types.h"
+#include "math/math.h"
 
-void initWorld();
-void freeWorld();
-F32 getViewDistance();
-void renderWorld(F32 dt);
+typedef struct GPUVertex {
+   Vec4 position;
+   F32 uvx;
+   F32 uvy;
+} GPUVertex;
 
-#endif // _GAME_WORLD_H_
+typedef U32 GPUIndex;
+
+typedef struct RenderChunk {
+   GPUVertex *vertexData; /// stretchy buffer
+   GPUIndex *indices;          /// stretchy buffer
+   GPUIndex currentIndex;      /// Current index offset
+   GPUIndex indiceCount;       /// Indice Size
+   S32 vertexCount;       /// VertexData Count 
+
+   //GLuint vbo;            /// OpenGL Vertex Buffer Object
+   //GLuint ibo;            /// OpenGL Index Buffer Object
+} RenderChunk;
+
+#endif
