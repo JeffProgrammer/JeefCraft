@@ -29,7 +29,7 @@
 Chunk *gChunkWorld = NULL;
 
 // Grid size but should be variable. This is the 'chunk distance'.
-S32 worldSize = 2;
+S32 worldSize = 4;
 
 void initWorld() {
    initTerrainGenerator();
@@ -90,6 +90,8 @@ bool isTransparent(Cube *cubeData, S32 x, S32 y, S32 z) {
 }
 
 bool isTransparentAtCube(Cube *c) {
+   // Note: we are allowed null here, not an error if it is null.
+   // For example, this could be an edge - 1 of a chunk.
    if (c == NULL)
       return false;
    return c->material == Material_Air;
@@ -286,7 +288,6 @@ void removeCubeAtWorldPosition(Cube *cube, S32 x, S32 y, S32 z) {
    remeshChunkGeometryAtGlobalPos(x, y, z);
 }
 
-
 void addCubeAtGlobalPos(Vec3 position) {
    S32 x = (S32)position.x;
    S32 y = (S32)position.y;
@@ -320,7 +321,7 @@ void checkCubeAtLookAtCube(Vec3 cameraOrigin, Vec3 cameraDir, S32 x, S32 y, S32 
    planes[4] = create_vec4(cubeNormals[4][0], cubeNormals[4][1], cubeNormals[4][2], z + 1); // North
    planes[5] = create_vec4(cubeNormals[5][0], cubeNormals[5][1], cubeNormals[5][2], -z);    // South
 
-                                                                                            // Get the face of the cube that we are touching.
+   // Get the face of the cube that we are touching.
    for (S32 i = 0; i < 6; ++i) {
       Vec3 norm = create_vec3(planes[i].x, planes[i].y, planes[i].z);
       if (glm_vec_dot(cameraDir.vec, norm.vec) < 0.0f) {

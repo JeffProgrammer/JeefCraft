@@ -74,6 +74,7 @@ void uploadChunkToGL(Chunk *chunk) {
       free(chunk->graphicsData);
    // TODO: come up with a better way for holding the vbo/ibo/etc
    chunk->graphicsData = malloc(sizeof(ChunkGL));
+   memset(chunk->graphicsData, 0, sizeof(ChunkGL));
 
    for (S32 i = 0; i < CHUNK_SPLITS; ++i) {
       uploadRenderChunkToGL(chunk, i);
@@ -83,6 +84,7 @@ void uploadChunkToGL(Chunk *chunk) {
 void uploadRenderChunkToGL(Chunk *chunk, S32 renderChunkIndex) {
    RenderChunk *r = &chunk->renderChunks[renderChunkIndex];
    RenderChunkGL *gl = &((ChunkGL*)chunk->graphicsData)->r[renderChunkIndex];
+   memset(gl, 0, sizeof(RenderChunkGL));
 
    if (r->vertexCount > 0) {
       glGenBuffers(1, &gl->vbo);
@@ -110,6 +112,7 @@ void freeRenderChunkGL(Chunk *chunk, S32 renderChunkIndex) {
       glDeleteBuffers(1, &gl->ibo);
    }
    memset(r, 0, sizeof(RenderChunk));
+   memset(gl, 0, sizeof(RenderChunkGL));
 }
 
 void freeChunkGL(Chunk *chunk) {
@@ -266,6 +269,8 @@ void renderWorld(F32 delta) {
          }
       }
    }
+
+   return;
 
    // Do our raycast to screen world.
    Vec3 rayOrigin;

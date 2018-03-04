@@ -58,11 +58,8 @@ int main(int argc, char **argv) {
    F64 lastTime = getRealTime();
    F64 secondTime = lastTime;
 
-   initWorld();
-
-   // You must init renderer after world becuase of GL.
-   // ..I think.
    initMainRenderer();
+   initWorld();
 
    S32 fpsCounter = 0;
 #define FPS_BUFFER_SIZE 256
