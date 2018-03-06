@@ -16,19 +16,12 @@
 
 #include "world/util.h"
 #include "world/material.h"
+#include "world/worldMap.h"
 
 extern S32 worldSize;
-extern Chunk* gChunkWorld;
 
-Chunk* getChunkAt(S32 x, S32 z) {
-   // Since x and z can go from -worldSize to worldSize,
-   // we need to normalize them so that they are always positive.
-   x += worldSize;
-   z += worldSize;
-
-   S32 index = (z * (worldSize * 2)) + x;
-   return &gChunkWorld[index];
-}
+// Our map world
+extern ChunkTable gChunkTable;
 
 Cube* getCubeAt(Cube *cubeData, S32 x, S32 y, S32 z) {
    return &cubeData[x * (MAX_CHUNK_HEIGHT) * (CHUNK_WIDTH)+z * (MAX_CHUNK_HEIGHT)+y];
@@ -47,15 +40,8 @@ bool isTransparentAtCube(Cube *c) {
 }
 
 Chunk* getChunkAtWorldSpacePosition(S32 x, S32 y, S32 z) {
-   // first calculate chunk based upon position.
-   S32 chunkX = x < 0 ? ((x + 1) / CHUNK_WIDTH) - 1 : x / CHUNK_WIDTH;
-   S32 chunkZ = z < 0 ? ((z + 1) / CHUNK_WIDTH) - 1 : z / CHUNK_WIDTH;
-
-   // Don't go past.
-   if (chunkX < -worldSize || chunkX >= worldSize || chunkZ < -worldSize || chunkZ >= worldSize)
-      return NULL;
-
-   Chunk *chunk = getChunkAt(chunkX, chunkZ);
+   Chunk *chunk = chunktable_getAt(&gChunkTable, x, z);
+   assert(chunk);
    return chunk;
 }
 
@@ -93,11 +79,9 @@ Cube* getGlobalCubeAtWorldSpacePosition(S32 x, S32 y, S32 z) {
    S32 chunkX = x < 0 ? ((x + 1) / CHUNK_WIDTH) - 1 : x / CHUNK_WIDTH;
    S32 chunkZ = z < 0 ? ((z + 1) / CHUNK_WIDTH) - 1 : z / CHUNK_WIDTH;
 
-   // Don't go past.
-   if (chunkX < -worldSize || chunkX >= worldSize || chunkZ < -worldSize || chunkZ >= worldSize)
+   Chunk *chunk = chunktable_getAt(&gChunkTable, x, z);
+   if (chunk == NULL)
       return NULL;
-
-   Chunk *chunk = getChunkAt(chunkX, chunkZ);
 
    S32 localChunkX = x - (chunkX * CHUNK_WIDTH);
    S32 localChunkZ = z - (chunkZ * CHUNK_WIDTH);

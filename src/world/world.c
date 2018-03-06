@@ -31,10 +31,10 @@
 #include "world/material.h"
 #include "world/util.h"
 #include "world/terrainGen.h"
+#include "world/worldMap.h"
 
-/// ChunkWorld is a flat 2D array that represents the entire
-/// world based upon
-Chunk *gChunkWorld = NULL;
+// Our map world
+ChunkTable gChunkTable;
 
 // Grid size but should be variable. This is the 'chunk distance'.
 S32 worldSize = 2;
@@ -102,32 +102,36 @@ void generateGeometryForRenderChunk(Chunk *chunk, S32 renderChunkId) {
             bool isOpaqueNegativeZ = false;
             bool isOpaquePositiveZ = false;
 
-            if (x == 0 && chunkX > -worldSize) {
-               Cube *behindData = getChunkAt(chunkX - 1, chunkZ)->cubeData;
+            if (x == 0 && chunkX > (-worldSize * CHUNK_WIDTH)) {
+               Cube *behindData = chunktable_getAt(&gChunkTable, chunkX - CHUNK_WIDTH, chunkZ)->cubeData;
+               //Cube *behindData = getChunkAt(chunkX - 1, chunkZ)->cubeData;
                if (!isTransparent(behindData, CHUNK_WIDTH - 1, y, z)) {
                   // The cube behind us on the previous chunk is in fact
                   // transparent. We need to render this face.
                   isOpaqueNegativeX = true;
                }
             }
-            if (x == (CHUNK_WIDTH - 1) && (chunkX + 1) < worldSize) {
-               Cube *behindData = getChunkAt(chunkX + 1, chunkZ)->cubeData;
+            if (x == (CHUNK_WIDTH - 1) && (chunkX + CHUNK_WIDTH) < worldSize) {
+               Cube *behindData = chunktable_getAt(&gChunkTable, chunkX + CHUNK_WIDTH, chunkZ)->cubeData;
+               //Cube *behindData = getChunkAt(chunkX + 1, chunkZ)->cubeData;
                if (!isTransparent(behindData, 0, y, z)) {
                   // The cube behind us on the previous chunk is in fact
                   // transparent. We need to render this face.
                   isOpaquePositiveX = true;
                }
             }
-            if (z == 0 && chunkZ > -worldSize) {
-               Cube *behindData = getChunkAt(chunkX, chunkZ - 1)->cubeData;
+            if (z == 0 && chunkZ > (-worldSize * CHUNK_WIDTH)) {
+               Cube *behindData = chunktable_getAt(&gChunkTable, chunkX, chunkZ - CHUNK_WIDTH)->cubeData;
+               //Cube *behindData = getChunkAt(chunkX, chunkZ - 1)->cubeData;
                if (!isTransparent(behindData, x, y, CHUNK_WIDTH - 1)) {
                   // The cube behind us on the previous chunk is in fact
                   // transparent. We need to render this face.
                   isOpaqueNegativeZ = true;
                }
             }
-            if (z == (CHUNK_WIDTH - 1) && (chunkZ + 1) < worldSize) {
-               Cube *behindData = getChunkAt(chunkX, chunkZ + 1)->cubeData;
+            if (z == (CHUNK_WIDTH - 1) && (chunkZ + CHUNK_WIDTH) < worldSize) {
+               Cube *behindData = chunktable_getAt(&gChunkTable, chunkX, chunkZ + CHUNK_WIDTH)->cubeData;
+               //Cube *behindData = getChunkAt(chunkX, chunkZ + 1)->cubeData;
                if (!isTransparent(behindData, x, y, 0)) {
                   // The cube behind us on the previous chunk is in fact
                   // transparent. We need to render this face.
@@ -233,7 +237,8 @@ void uploadGeometryToGL() {
    // TODO: use VAO if extension is supported??
    for (S32 x = -worldSize; x < worldSize; ++x) {
       for (S32 z = -worldSize; z < worldSize; ++z) {
-         uploadChunkToGL(getChunkAt(x, z));
+         Chunk *chunk = chunktable_getAt(&gChunkTable, x * CHUNK_WIDTH, z * CHUNK_WIDTH);
+         uploadChunkToGL(chunk);
       }
    }
 
@@ -295,9 +300,17 @@ void initWorld() {
 
    initTerrainGen();
 
-   // world grid
-   gChunkWorld = (Chunk*)calloc((worldSize * 2) * (worldSize * 2), sizeof(Chunk));
+   // Generate initial chunks.
+   // Note that simply alloating here it is better to allocate up front before generating
+   // the entire world as it will cause less thread contention with just inserting up front.
+   // TODO: handle threading on the chunktable datastructure!
    gTotalChunks = worldSize * 2 * worldSize * 2 * CHUNK_SPLITS;
+   chunktable_create(gTotalChunks, &gChunkTable);
+   for (S32 x = -worldSize; x < worldSize; ++x) {
+      for (S32 z = -worldSize; z < worldSize; ++z) {
+         chunktable_insertAt(&gChunkTable, x * CHUNK_WIDTH, z * CHUNK_WIDTH);
+      }
+   }
 
    // Easilly put each chunk in a thread in here.
    // nothing OpenGL, all calculation and world generation.
@@ -305,7 +318,7 @@ void initWorld() {
    for (S32 x = -worldSize; x < worldSize; ++x) {
       for (S32 z = -worldSize; z < worldSize; ++z) {
          // World position calcuation before passing.
-         generateWorld(x, z, x * CHUNK_WIDTH, z * CHUNK_WIDTH);
+         generateWorld(x * CHUNK_WIDTH, z * CHUNK_WIDTH);
       }
    }
 
@@ -315,7 +328,7 @@ void initWorld() {
 //#pragma omp parallel for
    for (S32 x = -worldSize; x < worldSize; ++x) {
       for (S32 z = -worldSize; z < worldSize; ++z) {
-         generateCavesAndStructures(x, z, x * CHUNK_WIDTH, z * CHUNK_WIDTH);
+         generateCavesAndStructures(x * CHUNK_WIDTH, z * CHUNK_WIDTH);
       }
    }
 
@@ -324,9 +337,7 @@ void initWorld() {
 //#pragma omp parallel for
    for (S32 x = -worldSize; x < worldSize; ++x) {
       for (S32 z = -worldSize; z < worldSize; ++z) {
-         Chunk * chunk = getChunkAt(x, z);
-         chunk->startX = x;
-         chunk->startZ = z;
+         Chunk *chunk = chunktable_getAt(&gChunkTable, x * CHUNK_WIDTH, z * CHUNK_WIDTH);
          generateGeometry(chunk);
       }
    }
@@ -339,13 +350,13 @@ void initWorld() {
 void freeWorld() {
    for (S32 x = -worldSize; x < worldSize; ++x) {
       for (S32 z = -worldSize; z < worldSize; ++z) {
-         Chunk *c = getChunkAt(x, z);
-         free(c->cubeData);
-         freeChunkGL(c);
+         Chunk *chunk = chunktable_getAt(&gChunkTable, x * CHUNK_WIDTH, z * CHUNK_WIDTH);
+         free(chunk->cubeData);
+         freeChunkGL(chunk);
       }
    }
 
-   free(gChunkWorld);
+   chunktable_free(&gChunkTable);
    freeTerrainGen();
 }
 
@@ -519,7 +530,7 @@ void renderWorld(F32 dt) {
 
    for (S32 x = -worldSize; x < worldSize; ++x) {
       for (S32 z = -worldSize; z < worldSize; ++z) {
-         Chunk *c = getChunkAt(x, z);
+         Chunk *c = chunktable_getAt(&gChunkTable, x * CHUNK_WIDTH, z * CHUNK_WIDTH);
          for (S32 i = 0; i < CHUNK_SPLITS; ++i) {
             if (c->renderChunks[i].vertexCount > 0) {
                gTotalVisibleChunks++;

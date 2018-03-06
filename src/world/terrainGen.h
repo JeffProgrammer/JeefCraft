@@ -24,9 +24,9 @@ void initTerrainGen();
 
 void freeTerrainGen();
 
-void generateWorld(S32 chunkX, S32 chunkZ, S32 worldX, S32 worldZ);
+void generateWorld(S32 worldX, S32 worldZ);
 
-void generateCavesAndStructures(S32 chunkX, S32 chunkZ, S32 worldX, S32 worldZ);
+void generateCavesAndStructures(S32 worldX, S32 worldZ);
 
 void generateGeometryForRenderChunk(Chunk *chunk, S32 renderChunkId);
 

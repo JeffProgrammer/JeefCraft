@@ -19,8 +19,6 @@
 
 #include "world/world.h"
 
-Chunk* getChunkAt(S32 x, S32 z);
-
 Cube* getCubeAt(Cube *cubeData, S32 x, S32 y, S32 z);
 
 bool isTransparent(Cube *cubeData, S32 x, S32 y, S32 z);
