@@ -53,7 +53,7 @@ bool isTransparentAtCube(Cube *c) {
 Chunk* getChunkAtWorldSpacePosition(S32 x, S32 y, S32 z) {
    S32 chunkX;
    S32 chunkZ;
-   worldCordsToChunkCoords(x, y, &chunkX, &chunkZ);
+   worldCordsToChunkCoords(x, z, &chunkX, &chunkZ);
    Chunk *chunk = chunktable_getAt(&gChunkTable, chunkX, chunkZ);
    assert(chunk);
    return chunk;
@@ -95,14 +95,15 @@ Cube* getGlobalCubeAtWorldSpacePosition(S32 x, S32 y, S32 z) {
    // first calculate chunk based upon position.
    S32 chunkX;
    S32 chunkZ;
-   worldCordsToChunkCoords(x, y, &chunkX, &chunkZ);
+   worldCordsToChunkCoords(x, z, &chunkX, &chunkZ);
 
    Chunk *chunk = chunktable_getAt(&gChunkTable, chunkX, chunkZ);
    if (chunk == NULL)
       return NULL;
 
+   // LocalY isn't used because we are in full chunk space, not render chunk space.
    S32 localX, localY, localZ;
    globalPosToLocalPos(x, y, z, &localX, &localY, &localZ);
-   assert(getCubeAt(chunk->cubeData, localX, localY, localZ));
-   return getCubeAt(chunk->cubeData, localX, localY, localZ);
+   assert(getCubeAt(chunk->cubeData, localX, y, localZ));
+   return getCubeAt(chunk->cubeData, localX, y, localZ);
 }

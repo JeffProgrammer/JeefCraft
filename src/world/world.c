@@ -582,8 +582,8 @@ void renderWorld(F32 dt) {
    // Check to see if we have something within 8 blocks away.
    Vec3 point = rayOrigin;
    Vec3 scalar;
-   glm_vec_scale(rayDir.vec, 0.1f, scalar.vec);
-   for (S32 i = 0; i < 80; ++i) {
+   glm_vec_scale(rayDir.vec, 0.01f, scalar.vec);
+   for (S32 i = 0; i < 800; ++i) {
       glm_vec_add(point.vec, scalar.vec, point.vec);
 
       Vec3 pos = create_vec3(floorf(point.x), floorf(point.y), floorf(point.z));
