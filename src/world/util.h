@@ -21,6 +21,8 @@
 
 Cube* getCubeAt(Cube *cubeData, S32 x, S32 y, S32 z);
 
+void worldCordsToChunkCoords(S32 x, S32 z, S32 *chunkX, S32 *chunkZ);
+
 bool isTransparent(Cube *cubeData, S32 x, S32 y, S32 z);
 
 bool isTransparentAtCube(Cube *c);

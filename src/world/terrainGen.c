@@ -22,9 +22,6 @@
 
 static struct osn_context *osn;
 
-// Grid size but should be variable. This is the 'chunk distance'.
-extern S32 worldSize;
-
 // Our map world
 extern ChunkTable gChunkTable;
 

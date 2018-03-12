@@ -27,6 +27,17 @@ Cube* getCubeAt(Cube *cubeData, S32 x, S32 y, S32 z) {
    return &cubeData[x * (MAX_CHUNK_HEIGHT) * (CHUNK_WIDTH)+z * (MAX_CHUNK_HEIGHT)+y];
 }
 
+void worldCordsToChunkCoords(S32 x, S32 z, S32 *chunkX, S32 *chunkZ) {
+   S32 roundedX = (S32)((F32)x / CHUNK_WIDTH);
+   S32 roundedZ = (S32)((F32)z / CHUNK_WIDTH);
+
+   if (x < 0) roundedX--;
+   if (z < 0) roundedZ--;
+
+   *chunkX = roundedX * CHUNK_WIDTH;
+   *chunkZ = roundedZ * CHUNK_WIDTH;
+}
+
 bool isTransparent(Cube *cubeData, S32 x, S32 y, S32 z) {
    assert(cubeData);
    assert(getCubeAt(cubeData, x, y, z));
@@ -40,7 +51,10 @@ bool isTransparentAtCube(Cube *c) {
 }
 
 Chunk* getChunkAtWorldSpacePosition(S32 x, S32 y, S32 z) {
-   Chunk *chunk = chunktable_getAt(&gChunkTable, x, z);
+   S32 chunkX;
+   S32 chunkZ;
+   worldCordsToChunkCoords(x, y, &chunkX, &chunkZ);
+   Chunk *chunk = chunktable_getAt(&gChunkTable, chunkX, chunkZ);
    assert(chunk);
    return chunk;
 }
@@ -57,13 +71,16 @@ RenderChunk* getRenderChunkAtWorldSpacePosition(S32 x, S32 y, S32 z, S32 *render
 }
 
 void globalPosToLocalPos(S32 x, S32 y, S32 z, S32 *localX, S32 *localY, S32 *localZ) {
-   // first calculate chunk based upon position.
-   S32 chunkX = x < 0 ? ((x + 1) / CHUNK_WIDTH) - 1 : x / CHUNK_WIDTH;
-   S32 chunkZ = z < 0 ? ((z + 1) / CHUNK_WIDTH) - 1 : z / CHUNK_WIDTH;
    S32 chunkY = y / RENDER_CHUNK_HEIGHT;
 
-   *localX = x - (chunkX * CHUNK_WIDTH);
-   *localZ = z - (chunkZ * CHUNK_WIDTH);
+   if (x >= 0 || x % CHUNK_WIDTH == 0)
+      *localX = x % CHUNK_WIDTH;
+   else
+      *localX = x % CHUNK_WIDTH + CHUNK_WIDTH;
+   if (z >= 0 || z % CHUNK_WIDTH == 0)
+      *localZ = z % CHUNK_WIDTH;
+   else
+      *localZ = z % CHUNK_WIDTH + CHUNK_WIDTH;
    *localY = y - (chunkY * RENDER_CHUNK_HEIGHT);
 
    assert(*localX >= 0);
@@ -76,20 +93,16 @@ void globalPosToLocalPos(S32 x, S32 y, S32 z, S32 *localX, S32 *localY, S32 *loc
 
 Cube* getGlobalCubeAtWorldSpacePosition(S32 x, S32 y, S32 z) {
    // first calculate chunk based upon position.
-   S32 chunkX = x < 0 ? ((x + 1) / CHUNK_WIDTH) - 1 : x / CHUNK_WIDTH;
-   S32 chunkZ = z < 0 ? ((z + 1) / CHUNK_WIDTH) - 1 : z / CHUNK_WIDTH;
+   S32 chunkX;
+   S32 chunkZ;
+   worldCordsToChunkCoords(x, y, &chunkX, &chunkZ);
 
-   Chunk *chunk = chunktable_getAt(&gChunkTable, x, z);
+   Chunk *chunk = chunktable_getAt(&gChunkTable, chunkX, chunkZ);
    if (chunk == NULL)
       return NULL;
 
-   S32 localChunkX = x - (chunkX * CHUNK_WIDTH);
-   S32 localChunkZ = z - (chunkZ * CHUNK_WIDTH);
-
-   assert(localChunkX >= 0);
-   assert(localChunkZ >= 0);
-   assert(localChunkX < CHUNK_WIDTH);
-   assert(localChunkZ < CHUNK_WIDTH);
-
-   return getCubeAt(chunk->cubeData, localChunkX, y, localChunkZ);
+   S32 localX, localY, localZ;
+   globalPosToLocalPos(x, y, z, &localX, &localY, &localZ);
+   assert(getCubeAt(chunk->cubeData, localX, localY, localZ));
+   return getCubeAt(chunk->cubeData, localX, localY, localZ);
 }
