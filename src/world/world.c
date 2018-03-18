@@ -32,6 +32,7 @@
 #include "world/util.h"
 #include "world/terrainGen.h"
 #include "world/worldMap.h"
+#include "world/lighting.h"
 
 // Our map world
 ChunkTable gChunkTable;
@@ -48,7 +49,7 @@ Texture2D textureAtlas;
 #define TEXTURE_ATLAS_COUNT_I 32
 #define TEXTURE_ATLAS_COUNT_F 32.0f
 
-static void buildFace(Chunk *chunk, S32 index, S32 side, S32 material, Vec3 localPos) {
+static void buildFace(Chunk *chunk, S32 index, S32 side, F32 light, S32 material, Vec3 localPos) {
    // Vertex data first, then index data.
 
    RenderChunk *renderChunk = &chunk->renderChunks[index];
@@ -61,6 +62,8 @@ static void buildFace(Chunk *chunk, S32 index, S32 side, S32 material, Vec3 loca
       v.position.w = cubes[side][i][3];
       v.uvx = (F32)(cubeUVs[side][i][0] + ((F32)(material % TEXTURE_ATLAS_COUNT_I))) / TEXTURE_ATLAS_COUNT_F;
       v.uvy = (F32)(cubeUVs[side][i][1] + ((F32)(material / TEXTURE_ATLAS_COUNT_I))) / TEXTURE_ATLAS_COUNT_F;
+      v.light = light;
+      v.padding = 1.0f;
       sb_push(renderChunk->vertexData, v);
    }
    renderChunk->vertexCount += 4;
@@ -147,14 +150,15 @@ void generateGeometryForRenderChunk(Chunk *chunk, S32 renderChunkId) {
             // If the cube is exposed in that direction, render that face.
 
             S32 material = getCubeAt(cubeData, x, y, z)->material;
+            F32 light = (F32)chunk_getBlockLight(chunk, x, y, z);
 
             if (y >= (MAX_CHUNK_HEIGHT - 1) || isTransparent(cubeData, x, y + 1, z))
-               buildFace(chunk, renderChunkId, CubeSides_Up, material, localPos);
+               buildFace(chunk, renderChunkId, CubeSides_Up, light, material, localPos);
 
             // If this is grass, bottom has to be dirt.
 
             if (y == 0 || isTransparent(cubeData, x, y - 1, z))
-               buildFace(chunk, renderChunkId, CubeSides_Down, (material == Material_Grass ? Material_Dirt : material), localPos);
+               buildFace(chunk, renderChunkId, CubeSides_Down, light, (material == Material_Grass ? Material_Dirt : material), localPos);
 
             // After we built the top, this is a special case for grass.
             // If we are actually building grass sides it has to be special.
@@ -162,16 +166,16 @@ void generateGeometryForRenderChunk(Chunk *chunk, S32 renderChunkId) {
                material = Material_Grass_Side;
 
             if ((!isOpaqueNegativeX && x == 0) || (x > 0 && isTransparent(cubeData, x - 1, y, z)))
-               buildFace(chunk, renderChunkId, CubeSides_West, material, localPos);
+               buildFace(chunk, renderChunkId, CubeSides_West, light, material, localPos);
 
             if ((!isOpaquePositiveX && x >= (CHUNK_WIDTH - 1)) || (x < (CHUNK_WIDTH - 1) && isTransparent(cubeData, x + 1, y, z)))
-               buildFace(chunk, renderChunkId, CubeSides_East, material, localPos);
+               buildFace(chunk, renderChunkId, CubeSides_East, light, material, localPos);
 
             if ((!isOpaqueNegativeZ && z == 0) || (z > 0 && isTransparent(cubeData, x, y, z - 1)))
-               buildFace(chunk, renderChunkId, CubeSides_South, material, localPos);
+               buildFace(chunk, renderChunkId, CubeSides_South, light, material, localPos);
 
             if ((!isOpaquePositiveZ && z >= (CHUNK_WIDTH - 1)) || (z < (CHUNK_WIDTH - 1) && isTransparent(cubeData, x, y, z + 1)))
-               buildFace(chunk, renderChunkId, CubeSides_North, material, localPos);
+               buildFace(chunk, renderChunkId, CubeSides_North, light, material, localPos);
          }
       }
    }
@@ -207,6 +211,8 @@ void uploadRenderChunkToGL(RenderChunk *r) {
    // in both system and gpu ram.
    sb_free(r->vertexData);
    sb_free(r->indices);
+   r->vertexData = NULL;
+   r->indices = NULL;
 }
 
 void uploadChunkToGL(Chunk *chunk) {
@@ -284,6 +290,9 @@ int pickerStatus = RELEASED;
 // status of placing blocks so we can't spam place blocks
 int placingStatus = RELEASED;
 
+// status of placing torch
+int placingTorchStatus = RELEASED;
+
 void initWorld() {
    // Only 2 mip levels.
    bool ret = createTexture2D("Assets/block_atlas.png", 4, 2, &textureAtlas);
@@ -353,6 +362,7 @@ void initWorld() {
 
 static void freeChunk(const Chunk *chunk) {
    free(chunk->cubeData);
+   chunk_freeLightmap((Chunk*)chunk);
    freeChunkGL((Chunk*)chunk);
 }
 
@@ -517,12 +527,15 @@ static void renderChunk(const Chunk *c) {
             glBindBuffer(GL_ARRAY_BUFFER, c->renderChunks[i].vbo);
             glEnableVertexAttribArray(0);
             glEnableVertexAttribArray(1);
+            glEnableVertexAttribArray(2);
             glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, sizeof(GPUVertex), (void*)offsetof(GPUVertex, position));
             glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(GPUVertex), (void*)offsetof(GPUVertex, uvx));
+            glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(GPUVertex), (void*)offsetof(GPUVertex, light));
             glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, c->renderChunks[i].ibo);
             glDrawElements(GL_TRIANGLES, (GLsizei)c->renderChunks[i].indiceCount, GL_UNSIGNED_INT, (void*)0);
             glDisableVertexAttribArray(0);
             glDisableVertexAttribArray(1);
+            glDisableVertexAttribArray(2);
 
             gVisibleChunks++;
          }
@@ -627,6 +640,16 @@ void renderWorld(F32 dt) {
             placingStatus = PRESSED;
          } else if (inputGetKeyStatus(KEY_H) == RELEASED) {
             placingStatus = RELEASED;
+         }
+
+         if (placingStatus == RELEASED && inputGetKeyStatus(KEY_T) == PRESSED) {
+            S32 localX, localY, localZ;
+            Chunk *chunk = getChunkAtWorldSpacePosition((S32)pos.x, (S32)pos.y, (S32)pos.z);
+            globalPosToLocalPos((S32)pos.x, (S32)pos.y, (S32)pos.z, &localX, &localY, &localZ);
+            chunk_setBlockLight(chunk, localX, localY, localZ, MAX_LIGHT_LEVEL);
+            placingTorchStatus = PRESSED;
+         } else if (inputGetKeyStatus(KEY_H) == RELEASED) {
+            placingTorchStatus = RELEASED;
          }
 
          break;

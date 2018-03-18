@@ -83,6 +83,8 @@ set(JEEFCRAFT_SRC
 	src/platform/glfw3/glfw3Window.c
 
 	src/world/cube.h
+	src/world/lighting.c
+	src/world/lighting.h
 	src/world/material.h
 	src/world/terrainGen.c
 	src/world/terrainGen.h

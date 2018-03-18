@@ -12,31 +12,26 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+//
+// Note: Lighting implementation comes from and builds off of the technical
+// blogposts from Seed Of Andromeda.
+// https://www.seedofandromeda.com/blogs/
 //----------------------------------------------------------------------------
 
-#ifndef _WORLD_UTIL_H_
-#define _WORLD_UTIL_H_
+#ifndef _WORLD_LIGHTING_H_
+#define _WORLD_LIGHTING_H_
 
 #include "world/world.h"
 
-inline static S32 flattenWorldArrayIndex(S32 x, S32 y, S32 z) {
-   return x * (MAX_CHUNK_HEIGHT) * (CHUNK_WIDTH)+z * (MAX_CHUNK_HEIGHT)+y;
-}
+void chunk_initLightmap(Chunk *chunk);
+void chunk_freeLightmap(Chunk *chunk);
+S32 chunk_getBlockLight(Chunk *chunk, S32 x, S32 y, S32 z);
+void chunk_setBlockLight(Chunk *chunk, S32 x, S32 y, S32 z, S32 value);
 
-Cube* getCubeAt(Cube *cubeData, S32 x, S32 y, S32 z);
+#define LIGHTQUEUE_TEST
 
-void worldCordsToChunkCoords(S32 x, S32 z, S32 *chunkX, S32 *chunkZ);
-
-bool isTransparent(Cube *cubeData, S32 x, S32 y, S32 z);
-
-bool isTransparentAtCube(Cube *c);
-
-Chunk* getChunkAtWorldSpacePosition(S32 x, S32 y, S32 z);
-
-RenderChunk* getRenderChunkAtWorldSpacePosition(S32 x, S32 y, S32 z, S32 *renderChunkIndex);
-
-void globalPosToLocalPos(S32 x, S32 y, S32 z, S32 *localX, S32 *localY, S32 *localZ);
-
-Cube* getGlobalCubeAtWorldSpacePosition(S32 x, S32 y, S32 z);
+#ifdef LIGHTQUEUE_TEST
+void LIGHTQUEUE_TEST_FN();
+#endif
 
 #endif

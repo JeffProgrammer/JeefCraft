@@ -15,6 +15,7 @@
 //----------------------------------------------------------------------------
 
 #include "world/worldMap.h"
+#include "world/lighting.h"
 
 void chunktable_create(S32 tblSize, ChunkTable *outTable) {
    assert(tblSize > 0);
@@ -26,9 +27,11 @@ void chunktable_create(S32 tblSize, ChunkTable *outTable) {
 }
 
 void chunktable_free(ChunkTable *table) {
-   // Free all cubedata on chunk
-   for (S32 i = 0; i < table->count; ++i)
+   // Free all cubedata and lightmap data on chunk
+   for (S32 i = 0; i < table->count; ++i) {
       free(table->chunkTable[i].cubeData);
+      chunk_freeLightmap(&table->chunkTable[i]);
+   }
    free(table->chunkTable);
 
    // TODO: free "free list"
@@ -53,6 +56,7 @@ void chunktable_insertAt(ChunkTable *table, S32 x, S32 z) {
    chunk.startX = x;
    chunk.startZ = z;
    chunk.cubeData = (Cube*)calloc(CHUNK_SIZE, sizeof(Cube));
+   chunk_initLightmap(&chunk);
 
    // Append it to the table.
    memcpy(&table->chunkTable[index], &chunk, sizeof(Chunk));
@@ -65,6 +69,7 @@ void chunktable_removeAt(ChunkTable *table, S32 x, S32 z) {
          // TODO: free list
 
          free(c->cubeData);
+         chunk_freeLightmap(c);
 
          // shift elements down by one.
          memmove(

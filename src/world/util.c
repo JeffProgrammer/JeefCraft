@@ -24,7 +24,7 @@ extern S32 worldSize;
 extern ChunkTable gChunkTable;
 
 Cube* getCubeAt(Cube *cubeData, S32 x, S32 y, S32 z) {
-   return &cubeData[x * (MAX_CHUNK_HEIGHT) * (CHUNK_WIDTH)+z * (MAX_CHUNK_HEIGHT)+y];
+   return &cubeData[flattenWorldArrayIndex(x, y, z)];
 }
 
 void worldCordsToChunkCoords(S32 x, S32 z, S32 *chunkX, S32 *chunkZ) {
@@ -55,7 +55,6 @@ Chunk* getChunkAtWorldSpacePosition(S32 x, S32 y, S32 z) {
    S32 chunkZ;
    worldCordsToChunkCoords(x, z, &chunkX, &chunkZ);
    Chunk *chunk = chunktable_getAt(&gChunkTable, chunkX, chunkZ);
-   assert(chunk);
    return chunk;
 }
 
