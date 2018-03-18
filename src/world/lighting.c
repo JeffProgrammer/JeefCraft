@@ -29,8 +29,8 @@ typedef struct Node {
    S32 z;
    Chunk *c;
 
-   Node *next;
-   Node *prev;
+   struct Node *next;
+   struct Node *prev;
 } Node;
 
 #define LIGHTQUEUE_INITIAL_LENGTH 16
@@ -203,7 +203,8 @@ static inline void lightmap_setBlockLight(LightMap *lightMap, S32 x, S32 y, S32 
    assert(value <= MAX_LIGHT_LEVEL);
 
    S32 index = flattenWorldArrayIndex(x, y, z);
-   lightMap->lights[index] = (lightMap->lights[index] & 0xF) | (value);
+   lightMap->lights[index] = (lightMap->lights[index] & 0xF0) | (value);
+   assert(lightMap->lights[index] <= MAX_LIGHT_LEVEL);
 }
 
 //-----------------------------------------------------------------------------
@@ -225,9 +226,11 @@ S32 chunk_getBlockLight(Chunk *chunk, S32 x, S32 y, S32 z) {
 }
 
 static void updateSurroundingBlock(LightQueue *q, Chunk *chunk, S32 x, S32 y, S32 z, S32 lightLevel) {
-   if (!isTransparent(chunk->cubeData, x, y, z) && lightmap_getBlockLight(chunk->lightMap, x, y, z) + MIN_LIGHT_LEVEL <= lightLevel) {
-      lightmap_setBlockLight(chunk->lightMap, x, y, z, lightLevel - 1);
-      lightqueue_push(q, x, y, z, chunk);
+   if (lightLevel > MIN_LIGHT_LEVEL) {
+      if (!isTransparent(chunk->cubeData, x, y, z) && lightmap_getBlockLight(chunk->lightMap, x, y, z) + MIN_LIGHT_LEVEL <= lightLevel) {
+         lightmap_setBlockLight(chunk->lightMap, x, y, z, lightLevel - 1);
+         lightqueue_push(q, x, y, z, chunk);
+      }
    }
 }
 
@@ -298,9 +301,9 @@ void chunk_setBlockLight(Chunk *chunk, S32 x, S32 y, S32 z, S32 value) {
          updateSurroundingBlock(&q, n.c, n.x, n.y, n.z + 1, lightLevel);
       }
 
-      if (y > 0)
+      if (n.y > 0)
          updateSurroundingBlock(&q, n.c, n.x, n.y - 1, n.z, lightLevel);
-      if (y < MAX_CHUNK_HEIGHT - 1)
+      if (n.y < MAX_CHUNK_HEIGHT - 1)
          updateSurroundingBlock(&q, n.c, n.x, n.y + 1, n.z, lightLevel);
    }
 

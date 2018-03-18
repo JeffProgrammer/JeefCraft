@@ -11,8 +11,8 @@ const vec3 sun_dir = vec3(0.32, 0.75, 0.54);
 const vec3 sun_color = vec3(1.4, 1.2, 0.4);
 const vec4 ambient = vec4(0.3, 0.3, 0.4, 0.0);
 
-#define MIN_LIGHT_CONSTANT 0.0
-#define MAX_LIGHT_CONSTANT 3.0
+#define MIN_LIGHT_CONSTANT 2.0
+#define MAX_LIGHT_CONSTANT 15.0
 
 void main() {
 	vec4 diffuse = texture2D(textureAtlas, vUvs);

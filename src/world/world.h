@@ -39,8 +39,8 @@ typedef struct Cube {
    U16 flag2 : 1;     // 1-bit extra flag
 } Cube;
 
-#define MAX_LIGHT_LEVEL 3
-#define MIN_LIGHT_LEVEL 0
+#define MAX_LIGHT_LEVEL 15
+#define MIN_LIGHT_LEVEL 2
 
 /**
  * Light values sit as this in memory:
