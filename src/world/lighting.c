@@ -28,6 +28,7 @@ typedef struct Node {
    S32 y;
    S32 z;
    Chunk *c;
+   S32 renderChunkId;
 
    struct Node *next;
    struct Node *prev;
@@ -69,12 +70,13 @@ void lightqueue_cleanup(LightQueue *queue) {
    memset(queue, 0, sizeof(LightQueue));
 }
 
-void lightqueue_push(LightQueue *queue, S32 x, S32 y, S32 z, Chunk *c) {
+void lightqueue_push(LightQueue *queue, S32 x, S32 y, S32 z, Chunk *c, S32 renderChunkId) {
    Node *n = (Node*)calloc(1, sizeof(Node));
    n->x = x;
    n->y = y;
    n->z = z;
    n->c = c;
+   n->renderChunkId = renderChunkId;
 
    queue->count++;
 
@@ -151,7 +153,7 @@ void LIGHTQUEUE_TEST_FN() {
    lightqueue_init(&q);
 
    for (S32 i = 0; i < LIGHTQUEUE_INITIAL_LENGTH; ++i)
-      lightqueue_push(&q, i, i, i, (Chunk*)i);
+      lightqueue_push(&q, i, i, i, (Chunk*)i, 9);
 
    // Get front of queue
    Node n = lightqueue_front(&q);
@@ -161,7 +163,7 @@ void LIGHTQUEUE_TEST_FN() {
    lightqueue_pop(&q);
 
    // Now insert another item
-   lightqueue_push(&q, 69, 69, 69, (Chunk*)69);
+   lightqueue_push(&q, 69, 69, 69, (Chunk*)69, 69);
    Node next = lightqueue_front(&q);
    assert(next.x == 1);
 
@@ -185,26 +187,26 @@ static inline void lightmap_init(LightMap *lightMap) {
 }
 
 static inline S32 lightmap_getGlobalLight(LightMap *lightMap, S32 x, S32 y, S32 z) {
-   return (lightMap->lights[flattenWorldArrayIndex(x, y, z)] >> 4) & 0xF;
+   return (S32)lightMap->lights[flattenRenderChunkArrayIndex(x, y, z)].global;
 }
 
 static inline void lightmap_setGlobalLight(LightMap *lightMap, S32 x, S32 y, S32 z, S32 value) {
    assert(value <= MAX_LIGHT_LEVEL);
 
-   S32 index = flattenWorldArrayIndex(x, y, z);
-   lightMap->lights[index] = (lightMap->lights[index] & 0xF) | (value << 4);
+   S32 index = flattenRenderChunkArrayIndex(x, y, z);
+   lightMap->lights[index].global = (U8)value;
 }
 
 static inline S32 lightmap_getBlockLight(LightMap *lightMap, S32 x, S32 y, S32 z) {
-   return lightMap->lights[flattenWorldArrayIndex(x, y, z)] & 0xF;
+   return (S32)lightMap->lights[flattenRenderChunkArrayIndex(x, y, z)].block;
 }
 
 static inline void lightmap_setBlockLight(LightMap *lightMap, S32 x, S32 y, S32 z, S32 value) {
    assert(value <= MAX_LIGHT_LEVEL);
 
-   S32 index = flattenWorldArrayIndex(x, y, z);
-   lightMap->lights[index] = (lightMap->lights[index] & 0xF0) | (value);
-   assert(lightMap->lights[index] <= MAX_LIGHT_LEVEL);
+   S32 index = flattenRenderChunkArrayIndex(x, y, z);
+   lightMap->lights[index].block = (U8)value;
+   assert(lightMap->lights[index].block <= MAX_LIGHT_LEVEL);
 }
 
 //-----------------------------------------------------------------------------
@@ -212,36 +214,49 @@ static inline void lightmap_setBlockLight(LightMap *lightMap, S32 x, S32 y, S32 
 //-----------------------------------------------------------------------------
 
 void chunk_initLightmap(Chunk *chunk) {
-   chunk->lightMap = (LightMap*)malloc(sizeof(LightMap));
-   lightmap_init(chunk->lightMap);
+   for (S32 i = 0; i < CHUNK_SPLITS; ++i) {
+      chunk->lightMap[i] = (LightMap*)malloc(sizeof(LightMap));
+      lightmap_init(chunk->lightMap[i]);
+   }
 }
 
 void chunk_freeLightmap(Chunk *chunk) {
-   free(chunk->lightMap);
-   chunk->lightMap = NULL;
+   for (S32 i = 0; i < CHUNK_SPLITS; ++i) {
+      free(chunk->lightMap[i]);
+   }
+   //free(chunk->lightMap);
+   //chunk->lightMap = NULL;
 }
 
 S32 chunk_getBlockLight(Chunk *chunk, S32 x, S32 y, S32 z) {
-   return lightmap_getBlockLight(chunk->lightMap, x, y, z);
+   return lightmap_getBlockLight(chunk->lightMap[y / RENDER_CHUNK_HEIGHT], x, y % RENDER_CHUNK_HEIGHT, z);
 }
 
 static void updateSurroundingBlock(LightQueue *q, Chunk *chunk, S32 x, S32 y, S32 z, S32 lightLevel) {
+   S32 renderChunkId = y / RENDER_CHUNK_HEIGHT;
+
    if (lightLevel > MIN_LIGHT_LEVEL) {
-      if (!isTransparent(chunk->cubeData, x, y, z) && lightmap_getBlockLight(chunk->lightMap, x, y, z) + MIN_LIGHT_LEVEL <= lightLevel) {
-         lightmap_setBlockLight(chunk->lightMap, x, y, z, lightLevel - 1);
-         lightqueue_push(q, x, y, z, chunk);
+      if (!isTransparent(chunk->cubeData, x, y, z) && lightmap_getBlockLight(chunk->lightMap[renderChunkId], x, y % RENDER_CHUNK_HEIGHT, z) + MIN_LIGHT_LEVEL <= lightLevel) {
+         // lightmap_setBlockLight requires a 'local y'
+         lightmap_setBlockLight(chunk->lightMap[renderChunkId], x, y % RENDER_CHUNK_HEIGHT, z, lightLevel - 1);
+         lightqueue_push(q, x, y, z, chunk, renderChunkId);
       }
    }
 }
+
+typedef struct UpdateLightChunkInfo {
+   Chunk *c;
+   S32 renderChunkIndex;
+} UpdateLightChunkInfo;
 
 void chunk_setBlockLight(Chunk *chunk, S32 x, S32 y, S32 z, S32 value) {
    LightQueue q;
    lightqueue_init(&q);
 
-   lightmap_setBlockLight(chunk->lightMap, x, y, z, value);
-   lightqueue_push(&q, x, y, z, chunk);
+   lightmap_setBlockLight(chunk->lightMap[y / RENDER_CHUNK_HEIGHT], x, y % RENDER_CHUNK_HEIGHT, z, value);
+   lightqueue_push(&q, x, y, z, chunk, y / RENDER_CHUNK_HEIGHT);
 
-   Chunk **chunkList = NULL;
+   UpdateLightChunkInfo *chunkList = NULL;
 
    while (q.count) {
       Node n = lightqueue_front(&q);
@@ -250,19 +265,20 @@ void chunk_setBlockLight(Chunk *chunk, S32 x, S32 y, S32 z, S32 value) {
       // Insert chunk into list if it doesn't exist.
       bool found = false;
       for (S32 i = 0; i < sb_count(chunkList); ++i) {
-         if (chunkList[i] == n.c) {
+         if (chunkList[i].c == n.c && chunkList[i].renderChunkIndex == n.renderChunkId) {
             found = true;
             break;
          }
       }
       if (!found) {
-         sb_push(chunkList, n.c);
+         UpdateLightChunkInfo ch;
+         ch.c = n.c;
+         ch.renderChunkIndex = n.renderChunkId;
+         sb_push(chunkList, ch);
       }
 
-      LightMap *checkingMap = n.c->lightMap;
-
       // Get block light level for our current node
-      S32 lightLevel = lightmap_getBlockLight(checkingMap, n.x, n.y, n.z);
+      S32 lightLevel = lightmap_getBlockLight(n.c->lightMap[n.renderChunkId], n.x, n.y, n.z);
 
       // Go around each block and for each block that isn't opaque, subtract a light level - 1
       // Boudsn checking is needed on x and z axes.
@@ -301,24 +317,18 @@ void chunk_setBlockLight(Chunk *chunk, S32 x, S32 y, S32 z, S32 value) {
          updateSurroundingBlock(&q, n.c, n.x, n.y, n.z + 1, lightLevel);
       }
 
-      if (n.y > 0)
+      if (n.y == 0)
          updateSurroundingBlock(&q, n.c, n.x, n.y - 1, n.z, lightLevel);
       if (n.y < MAX_CHUNK_HEIGHT - 1)
          updateSurroundingBlock(&q, n.c, n.x, n.y + 1, n.z, lightLevel);
    }
 
-   // These are the chunks that need their lightmaps regenerated.
+   // These are the RenderChunks that need their lightmaps regenerated.
    for (S32 i = 0; i < sb_count(chunkList); ++i) {
-      Chunk *c = chunkList[i];
-      S32 chunkX = c->startX;
-      S32 chunkZ = c->startZ;
-      for (S32 j = 0; j < CHUNK_SPLITS; ++j) {
-         // TODO: do this on a per-render chunk basis instead of the entire chunk!
-         // Rebuild this *render chunk*
-         S32 renderChunkId = j;
-         RenderChunk *r = &c->renderChunks[j]; //getRenderChunkAtWorldSpacePosition(chunkX, (j * RENDER_CHUNK_HEIGHT), chunkZ, &renderChunkId);
-         freeGenerateUpdate(c, r, renderChunkId);
-      }
+      Chunk *c = chunkList[i].c;
+      S32 index = chunkList[i].renderChunkIndex;
+      RenderChunk *r = &c->renderChunks[index];
+      freeGenerateUpdate(c, r, index);
    }
 
    sb_free(chunkList);

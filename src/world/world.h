@@ -44,12 +44,15 @@ typedef struct Cube {
 
 /**
  * Light values sit as this in memory:
- * G = Sunlight / Global Light
- * B = Blocklight / Local Light
- * GGGGBBBB
+ * global = Sunlight / Global Light
+ * block  = Blocklight / Local Light
  */
+typedef struct WorldLight {
+   U8 global : 4;
+   U8 block : 4;
+} WorldLight;
 typedef struct LightMap {
-   U8 lights[CHUNK_WIDTH * CHUNK_WIDTH * MAX_CHUNK_HEIGHT];
+   WorldLight lights[CHUNK_WIDTH * CHUNK_WIDTH * RENDER_CHUNK_HEIGHT];
 } LightMap;
 
 typedef struct RenderChunk {
@@ -68,7 +71,7 @@ typedef struct Chunk {
    S32 startZ;
    Cube *cubeData;                         /// Cube data for full chunk
    RenderChunk renderChunks[CHUNK_SPLITS]; /// Per-render chunk data.
-   LightMap *lightMap;
+   LightMap *lightMap[CHUNK_SPLITS];
 } Chunk;
 
 void initWorld();
