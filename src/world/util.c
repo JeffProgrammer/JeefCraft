@@ -28,14 +28,19 @@ Cube* getCubeAt(Cube *cubeData, S32 x, S32 y, S32 z) {
 }
 
 void worldCordsToChunkCoords(S32 x, S32 z, S32 *chunkX, S32 *chunkZ) {
-   S32 roundedX = (S32)((F32)x / CHUNK_WIDTH);
+   /*S32 roundedX = (S32)((F32)x / CHUNK_WIDTH);
    S32 roundedZ = (S32)((F32)z / CHUNK_WIDTH);
 
    if (x < 0) roundedX--;
    if (z < 0) roundedZ--;
 
    *chunkX = roundedX * CHUNK_WIDTH;
-   *chunkZ = roundedZ * CHUNK_WIDTH;
+   *chunkZ = roundedZ * CHUNK_WIDTH; */
+
+   S32 diffX = x % CHUNK_WIDTH;
+   S32 diffZ = z % CHUNK_WIDTH;
+   *chunkX = x < 0 ? x + diffX : x - diffX;
+   *chunkZ = z < 0 ? z + diffZ : z - diffZ;
 }
 
 bool isTransparent(Cube *cubeData, S32 x, S32 y, S32 z) {

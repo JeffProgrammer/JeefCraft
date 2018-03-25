@@ -24,7 +24,7 @@ inline static S32 flattenWorldArrayIndex(S32 x, S32 y, S32 z) {
 }
 
 inline static S32 flattenRenderChunkArrayIndex(S32 x, S32 y, S32 z) {
-   return x * (RENDER_CHUNK_HEIGHT) * (CHUNK_WIDTH)+z * (RENDER_CHUNK_HEIGHT)+y;
+   return x * (RENDER_CHUNK_HEIGHT) * (CHUNK_WIDTH)+z * (RENDER_CHUNK_HEIGHT)+(y % RENDER_CHUNK_HEIGHT); // works for global or local y
 }
 
 Cube* getCubeAt(Cube *cubeData, S32 x, S32 y, S32 z);

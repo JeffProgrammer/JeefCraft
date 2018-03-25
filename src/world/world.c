@@ -646,7 +646,7 @@ void renderWorld(F32 dt) {
             S32 localX, localY, localZ;
             Chunk *chunk = getChunkAtWorldSpacePosition((S32)pos.x, (S32)pos.y, (S32)pos.z);
             globalPosToLocalPos((S32)pos.x, (S32)pos.y, (S32)pos.z, &localX, &localY, &localZ);
-            chunk_setBlockLight(chunk, localX, localY, localZ, MAX_LIGHT_LEVEL);
+            chunk_setBlockLight(chunk, localX, (S32)pos.y /* GLOBAL Y */, localZ, MAX_LIGHT_LEVEL);
             placingTorchStatus = PRESSED;
          } else if (inputGetKeyStatus(KEY_H) == RELEASED) {
             placingTorchStatus = RELEASED;

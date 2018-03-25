@@ -229,7 +229,8 @@ void chunk_freeLightmap(Chunk *chunk) {
 }
 
 S32 chunk_getBlockLight(Chunk *chunk, S32 x, S32 y, S32 z) {
-   return lightmap_getBlockLight(chunk->lightMap[y / RENDER_CHUNK_HEIGHT], x, y % RENDER_CHUNK_HEIGHT, z);
+   S32 index = y / RENDER_CHUNK_HEIGHT;
+   return lightmap_getBlockLight(chunk->lightMap[index], x, y % RENDER_CHUNK_HEIGHT, z);
 }
 
 static void updateSurroundingBlock(LightQueue *q, Chunk *chunk, S32 x, S32 y, S32 z, S32 lightLevel) {
@@ -317,7 +318,7 @@ void chunk_setBlockLight(Chunk *chunk, S32 x, S32 y, S32 z, S32 value) {
          updateSurroundingBlock(&q, n.c, n.x, n.y, n.z + 1, lightLevel);
       }
 
-      if (n.y == 0)
+      if (n.y > 0)
          updateSurroundingBlock(&q, n.c, n.x, n.y - 1, n.z, lightLevel);
       if (n.y < MAX_CHUNK_HEIGHT - 1)
          updateSurroundingBlock(&q, n.c, n.x, n.y + 1, n.z, lightLevel);
